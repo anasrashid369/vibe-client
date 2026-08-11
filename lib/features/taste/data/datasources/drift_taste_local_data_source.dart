@@ -1,0 +1,79 @@
+import 'dart:convert';
+
+import 'package:drift/drift.dart';
+
+import '../../../../core/storage/database.dart';
+import '../../domain/entities/interaction.dart';
+import '../../domain/entities/taste_profile.dart';
+
+/// Talks directly to Drift. This is the only place in the app that
+/// knows about the database's table/column shapes — everything above
+/// this layer works with the domain entities instead.
+class DriftTasteLocalDataSource {
+  DriftTasteLocalDataSource(this._db);
+
+  final AppDatabase _db;
+
+  Future<void> recordInteraction(Interaction interaction) async {
+    await _db.into(_db.interactions).insert(
+          InteractionsCompanion.insert(
+            movieId: interaction.movieId,
+            action: interaction.action.name,
+            rating: Value(interaction.rating),
+            createdAt: interaction.createdAt,
+          ),
+        );
+  }
+
+  Future<int> countInteractions() async {
+    final countExp = _db.interactions.id.count();
+    final query = _db.selectOnly(_db.interactions)..addColumns([countExp]);
+    final row = await query.getSingle();
+    return row.read(countExp) ?? 0;
+  }
+
+  Future<TasteProfileEntity?> getTasteProfile() async {
+    final row =
+        await (_db.select(_db.tasteProfile)..where((t) => t.id.equals(1))).getSingleOrNull();
+    if (row == null) return null;
+
+    return TasteProfileEntity(
+      summaryText: row.summaryText,
+      topGenres: List<String>.from(jsonDecode(row.topGenres) as List),
+      topPeople: List<String>.from(jsonDecode(row.topPeople) as List),
+      moodTags: List<String>.from(jsonDecode(row.moodTags) as List),
+      interactionCountAtUpdate: row.interactionCountAtUpdate,
+      updatedAt: row.updatedAt,
+    );
+  }
+
+  Future<void> saveTasteProfile(TasteProfileEntity profile) async {
+    await _db.into(_db.tasteProfile).insertOnConflictUpdate(
+          TasteProfileCompanion.insert(
+            id: const Value(1),
+            summaryText: profile.summaryText,
+            topGenres: jsonEncode(profile.topGenres),
+            topPeople: jsonEncode(profile.topPeople),
+            moodTags: jsonEncode(profile.moodTags),
+            interactionCountAtUpdate: profile.interactionCountAtUpdate,
+            updatedAt: profile.updatedAt,
+          ),
+        );
+  }
+
+  Future<List<Interaction>> getRecentInteractions({int limit = 200}) async {
+    final rows = await (_db.select(_db.interactions)
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+          ..limit(limit))
+        .get();
+
+    return rows
+        .map((r) => Interaction(
+              movieId: r.movieId,
+              action: InteractionAction.values.byName(r.action),
+              rating: r.rating,
+              createdAt: r.createdAt,
+            ))
+        .toList();
+  }
+}
