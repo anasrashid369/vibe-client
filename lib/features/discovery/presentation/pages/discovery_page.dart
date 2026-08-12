@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
@@ -18,8 +18,6 @@ class DiscoveryPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('For You')),
-      // Explicit loading / error / empty / data states — no infinite
-      // spinners, no silent failures (spec §7.1 item 6).
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _ErrorState(
@@ -43,8 +41,8 @@ class DiscoveryPage extends ConsumerWidget {
                 ...result.recommendations.map(
                   (rec) => RecommendationCard(
                     recommendation: rec,
-                    onLike: () => _record(ref, rec.movieId, InteractionAction.liked),
-                    onSkip: () => _record(ref, rec.movieId, InteractionAction.skipped),
+                    onLike: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.liked),
+                    onSkip: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.skipped),
                   ),
                 ),
               ],
@@ -55,10 +53,31 @@ class DiscoveryPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _record(WidgetRef ref, int movieId, InteractionAction action) async {
-    await ref.read(recordInteractionProvider).call(
-          Interaction(movieId: movieId, action: action, createdAt: DateTime.now()),
-        );
+  Future<void> _record(
+    BuildContext context,
+    WidgetRef ref,
+    int movieId,
+    String title,
+    InteractionAction action,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(recordInteractionProvider).call(
+            Interaction(movieId: movieId, action: action, createdAt: DateTime.now()),
+          );
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(action == InteractionAction.liked ? 'Liked "$title"' : 'Skipped "$title"'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not save: $e'), backgroundColor: Colors.redAccent),
+      );
+    }
   }
 }
 
@@ -97,7 +116,7 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(32),
         child: Text(
-          'No recommendations yet — try rating a few movies first.',
+          'No recommendations yet â€” try rating a few movies first.',
           textAlign: TextAlign.center,
         ),
       ),
