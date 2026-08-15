@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/discovery/presentation/pages/discovery_page.dart';
 import '../features/onboarding/presentation/pages/onboarding_page.dart';
+import 'home_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -15,23 +15,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/discovery',
-        builder: (context, state) => const DiscoveryPage(),
-      ),
-      GoRoute(
-        path: '/vibe-search',
-        builder: (context, state) => const _Placeholder('Vibe Search'),
+        builder: (context, state) => const HomeShell(),
       ),
     ],
   );
 });
-
-// Temporary placeholder so the app boots before real pages are wired in.
-class _Placeholder extends StatelessWidget {
-  const _Placeholder(this.label);
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text('$label — TODO')));
-  }
-}

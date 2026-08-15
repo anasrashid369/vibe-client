@@ -38,6 +38,7 @@ class DiscoveryRepositoryImpl implements DiscoveryRepository {
                   reason: r.reason,
                   confidence: r.confidence,
                   posterPath: r.posterPath,
+                  genres: r.genres,
                 ))
             .toList(),
         fallbackTriggered: model.fallbackTriggered,
@@ -55,8 +56,14 @@ class DiscoveryRepositoryImpl implements DiscoveryRepository {
   Future<Result<List<Movie>>> getCandidates({String? genre}) async {
     try {
       final models = await _remote.getCandidates(genre: genre);
-      final movies = models
-          .map((m) => Movie(id: m.id, title: m.title, overview: m.overview, posterPath: m.posterPath))
+        final movies = models
+          .map((m) => Movie(
+            id: m.id,
+            title: m.title,
+            overview: m.overview,
+            posterPath: m.posterPath,
+            genres: m.genres,
+            ))
           .toList();
       return Result.ok(movies);
     } on DioException catch (e) {

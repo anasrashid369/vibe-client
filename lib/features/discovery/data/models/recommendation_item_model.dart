@@ -11,6 +11,7 @@ class RecommendationItemModel with _$RecommendationItemModel {
     required String reason,
     required String confidence,
     @JsonKey(name: 'poster_path') String? posterPath,
+    @Default([]) List<String> genres,
   }) = _RecommendationItemModel;
 
   factory RecommendationItemModel.fromJson(Map<String, dynamic> json) =>

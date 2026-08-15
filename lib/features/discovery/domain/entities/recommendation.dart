@@ -5,6 +5,7 @@ class Recommendation {
     required this.reason,
     required this.confidence,
     this.posterPath,
+    this.genres = const [],
   });
 
   final int movieId;
@@ -12,4 +13,5 @@ class Recommendation {
   final String reason;
   final String confidence; // 'high' | 'medium' | 'low'
   final String? posterPath;
+  final List<String> genres;
 }

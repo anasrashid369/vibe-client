@@ -76,4 +76,40 @@ class DriftTasteLocalDataSource {
             ))
         .toList();
   }
+
+  /// Caches basic movie metadata (title, genres, poster) locally so we
+  /// can later join interactions against it to derive real genre-based
+  /// taste, without needing a network round-trip per lookup. Called
+  /// whenever discovery or onboarding fetches movies from the BFF.
+  Future<void> cacheMovies(List<({int id, String title, List<String> genres, String? posterPath})> movies) async {
+    await _db.batch((batch) {
+      batch.insertAllOnConflictUpdate(
+        _db.moviesCache,
+        movies
+            .map((m) => MoviesCacheCompanion.insert(
+                  id: Value(m.id),
+                  title: m.title,
+                  overview: '',
+                  genres: jsonEncode(m.genres),
+                  posterPath: Value(m.posterPath),
+                  cachedAt: DateTime.now(),
+                ))
+            .toList(),
+      );
+    });
+  }
+
+  /// Looks up cached genres for a set of movie IDs -- used by
+  /// RecomputeTasteProfile to turn "liked movie 155" into "liked a
+  /// Crime/Thriller movie".
+  Future<Map<int, List<String>>> getGenresForMovies(Set<int> movieIds) async {
+    if (movieIds.isEmpty) return {};
+
+    final rows =
+        await (_db.select(_db.moviesCache)..where((t) => t.id.isIn(movieIds))).get();
+
+    return {
+      for (final row in rows) row.id: List<String>.from(jsonDecode(row.genres) as List),
+    };
+  }
 }
