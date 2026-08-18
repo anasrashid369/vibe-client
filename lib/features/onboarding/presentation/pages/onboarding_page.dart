@@ -56,37 +56,43 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   final movie = movies[index];
                   final isSelected = _selected.contains(movie.id);
 
-                  return GestureDetector(
-                    onTap: () => _toggle(movie.id),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: movie.posterPath != null
-                              ? Image.network(
-                                  'https://image.tmdb.org/t/p/w342${movie.posterPath}',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _posterFallback(movie.title),
-                                )
-                              : _posterFallback(movie.title),
-                        ),
-                        if (isSelected)
-                          Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.deepPurple, width: 3),
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.deepPurple.withValues(alpha: 0.25),
-                            ),
-                            child: const Align(
-                              alignment: Alignment.topRight,
-                              child: Padding(
-                                padding: EdgeInsets.all(4),
-                                child: Icon(Icons.check_circle, color: Colors.white),
+                  return Semantics(
+                    button: true,
+                    selected: isSelected,
+                    label: isSelected ? '${movie.title}, selected' : movie.title,
+                    child: GestureDetector(
+                      onTap: () => _toggle(movie.id),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: movie.posterPath != null
+                                ? Image.network(
+                                    'https://image.tmdb.org/t/p/w342${movie.posterPath}',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        _posterFallback(movie.title),
+                                  )
+                                : _posterFallback(movie.title),
+                          ),
+                          if (isSelected)
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.deepPurple, width: 3),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.deepPurple.withValues(alpha: 0.25),
+                              ),
+                              child: const Align(
+                                alignment: Alignment.topRight,
+                                child: Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(Icons.check_circle, color: Colors.white),
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },

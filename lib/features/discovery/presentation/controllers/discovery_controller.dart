@@ -2,11 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../taste/domain/entities/interaction.dart';
 import '../../../taste/taste_providers.dart';
+import '../../../vibe_search/vibe_search_providers.dart';
 import '../../discovery_providers.dart';
 import '../../domain/entities/recommendation_result.dart';
 
 /// AsyncNotifier maps cleanly onto "request in flight / succeeded / fell
-/// back / failed" — exactly the state shape the spec calls for.
+/// back / failed" -- exactly the state shape the spec calls for.
 class DiscoveryController extends AsyncNotifier<RecommendationResult> {
   @override
   Future<RecommendationResult> build() => _fetch();
@@ -23,8 +24,6 @@ class DiscoveryController extends AsyncNotifier<RecommendationResult> {
         .where((i) => i.action == InteractionAction.liked)
         .map((i) => i.movieId)
         .toList();
-    // Exclude anything already liked OR skipped -- don't show the same
-    // movie again either way.
     final excludeIds = recentInteractions.map((i) => i.movieId).toSet().toList();
 
     final result = await ref.read(getRecommendationsProvider).call(
@@ -36,14 +35,21 @@ class DiscoveryController extends AsyncNotifier<RecommendationResult> {
 
     final recommendationResult = result.when(ok: (data) => data, err: (error) => throw error);
 
-    // Cache these too, so genres are available for taste recompute even
-    // if the user likes something from the discovery feed rather than
-    // onboarding.
+    // Cache for genre-derivation.
     await tasteDataSource.cacheMovies(
       recommendationResult.recommendations
           .map((r) => (id: r.movieId, title: r.title, genres: r.genres, posterPath: r.posterPath))
           .toList(),
     );
+
+    // Best-effort: embed these too, so vibe search's index grows from
+    // discovery browsing, not just onboarding. Recommendations don't
+    // carry a full overview, so we build a descriptive proxy text from
+    // what we do have.
+    await ref.read(embedAndCacheMoviesProvider).call({
+      for (final r in recommendationResult.recommendations)
+        r.movieId: '${r.title}. ${r.genres.join(", ")}. ${r.reason}',
+    });
 
     return recommendationResult;
   }

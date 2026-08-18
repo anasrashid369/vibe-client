@@ -29,23 +29,64 @@ class DiscoveryPage extends ConsumerWidget {
 
           return RefreshIndicator(
             onRefresh: () => ref.read(discoveryControllerProvider.notifier).refresh(),
-            child: ListView(
-              children: [
-                Padding(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Responsive layout: single-column list on narrow
+                // windows, multi-column grid once there's enough width
+                // that a list starts feeling wasteful.
+                final isWide = constraints.maxWidth >= 700;
+
+                final badge = Padding(
                   padding: const EdgeInsets.all(16),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: AiSourceBadge(isAi: result.source == RecommendationSource.ai),
                   ),
-                ),
-                ...result.recommendations.map(
-                  (rec) => RecommendationCard(
-                    recommendation: rec,
-                    onLike: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.liked),
-                    onSkip: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.skipped),
-                  ),
-                ),
-              ],
+                );
+
+                if (!isWide) {
+                  return ListView(
+                    children: [
+                      badge,
+                      ...result.recommendations.map(
+                        (rec) => RecommendationCard(
+                          recommendation: rec,
+                          onLike: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.liked),
+                          onSkip: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.skipped),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: badge),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 420,
+                          mainAxisExtent: 180,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final rec = result.recommendations[index];
+                            return RecommendationCard(
+                              recommendation: rec,
+                              onLike: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.liked),
+                              onSkip: () => _record(context, ref, rec.movieId, rec.title, InteractionAction.skipped),
+                            );
+                          },
+                          childCount: result.recommendations.length,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           );
         },
@@ -116,7 +157,7 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(32),
         child: Text(
-          'No recommendations yet â€” try rating a few movies first.',
+          'No recommendations yet -- try rating a few movies first.',
           textAlign: TextAlign.center,
         ),
       ),

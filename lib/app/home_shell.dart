@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../features/discovery/presentation/pages/discovery_page.dart';
+import '../features/vibe_search/presentation/pages/vibe_search_page.dart';
 
 /// Bottom-nav shell for the two main sections. IndexedStack keeps both
-/// pages alive in memory when switching tabs, so DiscoveryPage doesn't
-/// re-fetch every time you tap back to it.
+/// pages alive in memory when switching tabs.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -22,7 +22,7 @@ class _HomeShellState extends State<HomeShell> {
         index: _index,
         children: const [
           DiscoveryPage(),
-          _VibeSearchPlaceholder(),
+          VibeSearchPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -40,26 +40,6 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Vibe Search',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _VibeSearchPlaceholder extends StatelessWidget {
-  const _VibeSearchPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Vibe Search')),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'Semantic vibe search is coming in Phase 2 -- describe a mood and get matching movies.',
-            textAlign: TextAlign.center,
-          ),
-        ),
       ),
     );
   }

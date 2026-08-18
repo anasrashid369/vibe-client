@@ -7,8 +7,8 @@ import '../../domain/entities/interaction.dart';
 import '../../domain/entities/taste_profile.dart';
 
 /// Talks directly to Drift. This is the only place in the app that
-/// knows about the database's table/column shapes — everything above
-/// this layer works with the domain entities instead.
+/// knows about the database's table/column shapes -- everything above
+/// this layer works with domain entities instead.
 class DriftTasteLocalDataSource {
   DriftTasteLocalDataSource(this._db);
 
@@ -110,6 +110,26 @@ class DriftTasteLocalDataSource {
 
     return {
       for (final row in rows) row.id: List<String>.from(jsonDecode(row.genres) as List),
+    };
+  }
+
+  /// Looks up full display details (title, poster, genres) for a set of
+  /// movie IDs -- used by vibe search to render results.
+  Future<Map<int, ({String title, String? posterPath, List<String> genres})>> getCachedMovieDetails(
+    Set<int> movieIds,
+  ) async {
+    if (movieIds.isEmpty) return {};
+
+    final rows =
+        await (_db.select(_db.moviesCache)..where((t) => t.id.isIn(movieIds))).get();
+
+    return {
+      for (final row in rows)
+        row.id: (
+          title: row.title,
+          posterPath: row.posterPath,
+          genres: List<String>.from(jsonDecode(row.genres) as List),
+        ),
     };
   }
 }
