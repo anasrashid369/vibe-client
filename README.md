@@ -2,65 +2,76 @@
 
 Flutter client for **Vibe** — an AI-native movie discovery app. The client
 never talks to an LLM or TMDB directly; every network call goes through
-[`vibe-bff`](https://github.com/YOUR_ORG/vibe-bff), which owns all provider
-secrets.
+[`vibe-bff`](https://github.com/anasrashid369/vibe-bff), which owns all
+provider secrets.
 
-Full product/engineering spec lives in the project's shared docs (see
-`vibe-infra/README.md` for the cross-repo overview).
+## Status: Feature-complete MVP + Phase 2 extensions
+
+### Implemented
+- **Onboarding** — curated poster grid, pick 5–8 movies, seeds initial taste
+- **Discovery ("For You")** — AI-curated recommendations with real posters,
+  genres, and a typewriter reveal animation on the reasoning text
+- **Rate/Like/Skip** — writes to local Drift storage, feeds back into taste
+  profile and future recommendation requests (`recentLikes`/`excludeIds`)
+- **Vibe Search** — free-text mood search using on-device semantic
+  (cosine-similarity) matching against locally cached movie embeddings
+- **Responsive layout** — single-column list on narrow windows, grid on wide
+- **Accessibility** — semantic labels on interactive elements, reduced-motion
+  support for the reveal animation
+- **Error/loading/empty states** — explicit UI for every discovery state
+- **Widget test suite** — covers all four discovery states, onboarding
+  selection logic, and the reveal animation
 
 ## Architecture
 
 Clean Architecture, feature-first. See `lib/`:
 
-```
 lib/
-  core/        # config, network (Dio), errors, theme, routing, storage (Drift), isolates
-  features/
-    onboarding/    # first-run taste seeding
-    discovery/     # main recommendations feed
-    taste/         # interaction recording + taste profile recompute
-    vibe_search/   # semantic search (Phase 2)
-  app/         # DI wiring, router, root widget
+core/ # config, network (Dio), errors, theme, routing, storage (Drift)
+features/
+onboarding/ # first-run taste seeding
+discovery/ # main recommendations feed + vibe search entry
+taste/ # interaction recording + taste profile recompute
+vibe_search/ # semantic search (embeddings, isolate cosine search)
+app/ # DI wiring, router, home shell (bottom nav)
+
+
+Each feature follows `data/ -> domain/ -> presentation/`. State management:
+Riverpod (`AsyncNotifier` for server state).
+
+## Local database (Drift)
+
+Four tables: `movies_cache`, `interactions`, `taste_profile`,
+`movie_embeddings`. All local, single-device, no sync (matches MVP scope).
+Regenerate the generated Drift/Freezed code after any schema/model change:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
 ```
-
-Each feature follows `data/ -> domain/ -> presentation/`.
-
-## State management
-
-Riverpod. Four state categories are kept separate:
-- **UI state** — ephemeral, widget-local
-- **Server state** — `AsyncValue<RecommendationState>` (loading/error/fallback)
-- **Persistent state** — Drift, not Riverpod
-- **Session state** — in-memory, e.g. current vibe-search query
 
 ## Getting started
 
 ```bash
 flutter pub get
-flutter run --dart-define=ENV=dev --dart-define=BFF_BASE_URL=http://localhost:4566
+flutter create --platforms=windows .   # one-time, if windows/ is missing
+flutter run -d windows --dart-define=BFF_BASE_URL=<your-bff-url>
 ```
 
-`BFF_BASE_URL` should point at the LocalStack API Gateway endpoint started
-by `vibe-infra` (see that repo's README) or your deployed BFF.
-
-## Status
-
-Scaffold only — Phase 0. See the roadmap below for what's next.
-
-## Roadmap
-
-| Phase | Focus |
-|---|---|
-| 0 | Repo scaffolding (this commit) |
-| 1 | MVP: onboarding, taste store, single-provider BFF calls, discovery screen, rate/like/skip |
-| 2 | Vibe/semantic search, multi-vendor failover, streaming reasoning field |
-| 3 | Observability, CI hardening |
-| 4 | Responsive layout, accessibility, full test suite |
-| 5 | Real AWS deploy, multi-device sync (stretch) |
+`BFF_BASE_URL` should point at your deployed BFF's base path (LocalStack
+API Gateway locally, or a real deployment).
 
 ## Testing
 
 ```bash
+flutter analyze
 flutter test
-flutter test integration_test
 ```
+
+## Known limitations
+- Real network token-streaming for the reasoning field isn't implemented —
+  API Gateway buffers full Lambda responses, so streaming would require
+  Lambda Function URLs (a different invocation path). The reveal animation
+  is a client-side effect over complete data, documented as such in
+  `typewriter_text.dart`.
+- `RecomputeTasteProfile` derives genres from locally cached movies; very
+  fresh installs with few interactions will have limited signal.
